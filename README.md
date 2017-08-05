@@ -1,6 +1,6 @@
 # VelobikeHistory
 Python library for https://velobike.ru statistics parsing.
-The library scans all pages of account's statistics at https://velobike/account/history.
+The library scans all pages of account's statistics at https://velobike.ru/account/history.
 
 ## Info provided
 * Total trips, total kms, total time
