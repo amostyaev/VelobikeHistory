@@ -4,6 +4,7 @@ import re
 import json
 import urllib
 import getpass
+import argparse
 import operator
 import http.cookiejar
 
@@ -30,13 +31,24 @@ def authenticateOnServer():
 	req = urllib.request.Request(url, data)
 	response = createCookedUrlOpener().open(req)
 	return json.load(response)['status'] == "ok"
+	
+def parseArguments():
+	parser = argparse.ArgumentParser()
+	parser.add_argument("-sp", "--start_page", help="Scan from the specified page number", type=int, default=1)
+	parser.add_argument("-ep", "--end_page", help="Scan to the specified page number", type=int, default=None)
+	parser.add_argument("-md", "--minimum_distance", help="Minimum distance to count in fastest trips report", type=int, default=0)
+	args = parser.parse_args()
+	global sp, ep, md
+	sp = args.start_page
+	ep = args.end_page
+	md = args.minimum_distance
 
 def grabTrips():
 	trips = []
 	opener = createCookedUrlOpener()
-	page = 1
+	page = sp
 	presents = True
-	while (presents):
+	while (presents and ((ep is None) or (page <= ep))):
 		print('Parsing page', page)
 		response = opener.open('https://velobike.ru/account/history/?page=' + str(page))
 		html = response.read()
@@ -115,8 +127,9 @@ def processTrips(trips):
 		appendToDictionary(stations, trip.p_from)
 		appendToDictionary(stations, trip.p_to)
 		appendToDictionary(bikes, trip.info_bike)
-		speed = trip.info_distance * 60 / trip.info_time if trip.info_time else 0
-		trips_speed[trip] = speed
+		if trip.info_distance >= md:
+			speed = trip.info_distance * 60 / trip.info_time if trip.info_time else 0
+			trips_speed[trip] = speed
 	
 	max_day = max(days.items(), key=operator.itemgetter(1))[0]
 	sorted_stations = sorted(stations.items(), key=operator.itemgetter(1, 0), reverse=True)
@@ -137,7 +150,8 @@ def processTrips(trips):
 	printTrips(trips)
 	return
 	
-if authenticateOnServer():
+parseArguments()
+if authenticateOnServer():	
 	trips = grabTrips()
 	processTrips(trips)
 else:
