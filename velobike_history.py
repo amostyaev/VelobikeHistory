@@ -55,27 +55,28 @@ def grabTrips():
 		
 		parsed_html = BeautifulSoup(html, "html.parser")
 		list = parsed_html.find('ul', class_="history-list")
-		for item in list.contents:
-			if not isinstance(item, Tag):
-				continue
-			if not item['class'][0] == 'history-list__item':
-				continue
-			if not (item.find('div', class_='card-preview') is None):
-				continue
-			holder = item.find('div', class_='history-list__holder')
-			point_from = str(holder.find_all('span', class_='route-info__point-title')[0].text.encode('utf-8'))
-			point_to = str(holder.find_all('span', class_='route-info__point-title')[1].text.encode('utf-8'))
-			time = str(holder.find('span', class_='routes-list__time').string.encode('utf-8'))
-			distance = str(holder.find('span', class_='routes-list__distance').string.encode('utf-8'))
-			trip = Trip()
-			trip.date = item.find('span', class_='history-list__date').text
-			trip.p_from = int(re.search('.*(\d{4})', point_from).group(1))
-			trip.p_to = int(re.search('.*(\d{4})', point_to).group(1))
-			trip.info_bike = holder.find('span', class_='routes-list__bike').string
-			trip.info_time = int(re.search('~ (\d*) ', time).group(1))
-			trip.info_distance = float(re.search('([\d\.]*) ', distance).group(1))
-			trips.append(trip)
-		presents = not (parsed_html.find('a', class_="btn-arrow-forward") is None)
+		if not (list is None):
+			for item in list.contents:
+				if not isinstance(item, Tag):
+					continue
+				if not item['class'][0] == 'history-list__item':
+					continue
+				if not (item.find('div', class_='card-preview') is None):
+					continue
+				holder = item.find('div', class_='history-list__holder')
+				point_from = str(holder.find_all('span', class_='route-info__point-title')[0].text.encode('utf-8'))
+				point_to = str(holder.find_all('span', class_='route-info__point-title')[1].text.encode('utf-8'))
+				time = str(holder.find('span', class_='routes-list__time').string.encode('utf-8'))
+				distance = str(holder.find('span', class_='routes-list__distance').string.encode('utf-8'))
+				trip = Trip()
+				trip.date = item.find('span', class_='history-list__date').text
+				trip.p_from = int(re.search('.*(\d{4})', point_from).group(1))
+				trip.p_to = int(re.search('.*(\d{4})', point_to).group(1))
+				trip.info_bike = holder.find('span', class_='routes-list__bike').string
+				trip.info_time = int(re.search('~ (\d*) ', time).group(1))
+				trip.info_distance = float(re.search('([\d\.]*) ', distance).group(1))
+				trips.append(trip)				
+		presents = not (parsed_html.find('a', class_="btn-arrow-forward") is None or list is None)
 		#presents = False
 		page = page + 1
 	print()
