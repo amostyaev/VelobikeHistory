@@ -2,11 +2,15 @@ from bs4 import BeautifulSoup
 from bs4 import Tag
 import re
 import json
+import pickle
 import urllib
+import os.path
 import getpass
 import argparse
 import operator
 import http.cookiejar
+
+DATA_FILE = 'trips.dat'
 
 class Trip:
 	def __str__(self):
@@ -14,17 +18,37 @@ class Trip:
 	
 cookies = http.cookiejar.CookieJar()
 
+def loadStorage():
+	global login, pin, trips
+	login = ''
+	trips = []
+	if not os.path.isfile(DATA_FILE): return
+	
+	with open(DATA_FILE, 'rb') as f:
+		data = pickle.load(f)
+	login = data[0]
+	pin = data[1]
+	trips = data[2]
+
+def saveStorage():
+	data = (login, pin, trips)
+	with open(DATA_FILE, 'wb') as f:
+		pickle.dump(data, f)
+
 def createCookedUrlOpener():
 	return urllib.request.build_opener(
 		urllib.request.HTTPRedirectHandler(),
 		urllib.request.HTTPHandler(debuglevel=0),
 		urllib.request.HTTPSHandler(debuglevel=0),
 		urllib.request.HTTPCookieProcessor(cookies))
-
-def authenticateOnServer():
+		
+def requestAuth():
+	global login, pin
 	login = input("Enter login: ")
 	pin = getpass.getpass("Enter pin: ")
 	print()
+
+def authenticateOnServer():
 	url = 'https://velobike.ru/api/login/'
 	values = {'login' : login, 'pin' : pin}
 	data = urllib.parse.urlencode(values).encode("utf-8")
@@ -44,11 +68,11 @@ def parseArguments():
 	md = args.minimum_distance
 
 def grabTrips():
-	trips = []
 	opener = createCookedUrlOpener()
 	page = sp
 	presents = True
-	while (presents and ((ep is None) or (page <= ep))):
+	storageReached = False
+	while (presents and not storageReached and ((ep is None) or (page <= ep))):
 		print('Parsing page', page)
 		response = opener.open('https://velobike.ru/account/history/?page=' + str(page))
 		html = response.read()
@@ -72,15 +96,18 @@ def grabTrips():
 				trip.date = item.find('span', class_='history-list__date').text
 				trip.p_from = int(re.search('.*(\d{4})', point_from).group(1))
 				trip.p_to = int(re.search('.*(\d{4})', point_to).group(1))
-				trip.info_bike = holder.find('span', class_='routes-list__bike').string
+				trip.info_bike = str(holder.find('span', class_='routes-list__bike').string)
 				trip.info_time = int(re.search('~ (\d*) ', time).group(1))
 				trip.info_distance = float(re.search('([\d\.]*) ', distance).group(1))
-				trips.append(trip)				
+				if any(x for x in trips if x.date == trip.date and x.p_from == trip.p_from \
+						and x.p_to == trip.p_to and x.info_bike == trip.info_bike and x.info_time == trip.info_time):
+					storageReached = True
+					break;
+				trips.append(trip)
 		presents = not (parsed_html.find('a', class_="btn-arrow-forward") is None or list is None)
 		#presents = False
 		page = page + 1
 	print()
-	return trips
 	
 def appendToDictionary(dict, value):
 	if value in dict:
@@ -152,8 +179,12 @@ def processTrips(trips):
 	return
 	
 parseArguments()
+loadStorage()
+if login == '':
+	requestAuth()
 if authenticateOnServer():	
-	trips = grabTrips()
-	processTrips(trips)
+	grabTrips()
+	saveStorage()
+	processTrips(trips)	
 else:
 	print('Wrong credentials!')
