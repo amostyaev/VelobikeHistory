@@ -69,6 +69,7 @@ def parseArguments():
 
 def grabTrips():
 	opener = createCookedUrlOpener()
+	local_trips = []
 	page = sp
 	presents = True
 	storageReached = False
@@ -103,10 +104,11 @@ def grabTrips():
 						and x.p_to == trip.p_to and x.info_bike == trip.info_bike and x.info_time == trip.info_time):
 					storageReached = True
 					break;
-				trips.append(trip)
+				local_trips.append(trip)
 		presents = not (parsed_html.find('a', class_="btn-arrow-forward") is None or list is None)
 		#presents = False
 		page = page + 1
+	trips[0:0] = local_trips
 	print()
 	
 def appendToDictionary(dict, value):
