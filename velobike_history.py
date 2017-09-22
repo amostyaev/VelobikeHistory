@@ -1,3 +1,4 @@
+from datetime import datetime
 from bs4 import BeautifulSoup
 from bs4 import Tag
 import re
@@ -66,6 +67,20 @@ def parseArguments():
 	sp = args.start_page
 	ep = args.end_page
 	md = args.minimum_distance
+
+def sanitizeTrips():
+	if login == '7987237':
+		trip_fix = Trip()
+		trip_fix.date = '21/09/2017'
+		trip_fix.p_from = 462
+		trip_fix.p_to = 352
+		trip_fix.info_bike = str(5123)
+		trip_fix.info_time = 58
+		trip_fix.info_distance = 14.7
+		if not (any(x for x in trips if x.date == trip_fix.date and x.p_from == trip_fix.p_from \
+						and x.p_to == trip_fix.p_to and x.info_bike == trip_fix.info_bike and x.info_time == trip_fix.info_time)):
+			trips.append(trip_fix)
+	trips.sort(key=lambda x: datetime.strptime(x.date, '%d/%m/%Y'), reverse=True)
 
 def grabTrips():
 	opener = createCookedUrlOpener()
@@ -186,6 +201,7 @@ if login == '':
 	requestAuth()
 if authenticateOnServer():	
 	grabTrips()
+	sanitizeTrips()
 	saveStorage()
 	processTrips(trips)	
 else:
