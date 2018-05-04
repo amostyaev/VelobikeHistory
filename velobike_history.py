@@ -116,11 +116,11 @@ def grabTrips():
 	trips[0:0] = local_trips
 	print()
 	
-def appendToDictionary(dict, value):
-	if value in dict:
-		dict[value] = dict[value] + 1
+def appendToDictionary(dict, key, value = 1):
+	if key in dict:
+		dict[key] = dict[key] + value
 	else:
-		dict[value] = 1
+		dict[key] = value
 		
 def tupleListToString(list, separateLines):
 	str_result = ""
@@ -138,15 +138,18 @@ def printTrips(trips):
 def processTrips(trips):
 	# Total trips, total kms, total time
 	# Avg kms, avg time, avg speed
-	# Max kms, max time, max per day (day)
+	# Max kms, max time
+	# Max kms in day, max time in day, max trips per day (day value)
 	# Used stations
 	# Used bikes
 	# 10 Fastest trips, used bikes
 	# 10 Longest trips, used bikes
 	days = {}
+	days_kms = {}
+	days_time = {}
 	bikes = {}
 	stations = {}
-	trips_speed = {}
+	trips_speed = {}    
 	max_kms = 0
 	max_time = 0
 	total_kms = 0
@@ -159,6 +162,8 @@ def processTrips(trips):
 		total_kms += trip.info_distance
 		total_time += trip.info_time
 		appendToDictionary(days, trip.date)
+		appendToDictionary(days_kms, trip.date, trip.info_distance)
+		appendToDictionary(days_time, trip.date, trip.info_time)
 		appendToDictionary(stations, trip.p_from)
 		appendToDictionary(stations, trip.p_to)
 		appendToDictionary(bikes, trip.info_bike)
@@ -167,6 +172,8 @@ def processTrips(trips):
 			trips_speed[trip] = speed
 	
 	max_day = max(days.items(), key=operator.itemgetter(1))[0]
+	max_day_kms	= max(days_kms.items(), key=operator.itemgetter(1))[0]
+	max_day_time = max(days_time.items(), key=operator.itemgetter(1))[0]
 	sorted_stations = sorted(stations.items(), key=operator.itemgetter(1, 0), reverse=True)
 	sorted_bikes = sorted(bikes.items(), key=operator.itemgetter(1, 0), reverse=True)
 	sorted_speed = sorted(trips_speed.items(), key=operator.itemgetter(1), reverse=True)
@@ -174,7 +181,8 @@ def processTrips(trips):
 	sorted_time = sorted(trips, key=lambda x: -x.info_time)
 	print('Total trips: {0}, total kms: {1}, total time: {2}'.format(len(trips), round(total_kms), timedelta(seconds=total_time)))
 	if len(trips) > 0: print('Avg kms: {0}, avg time: {1}, avg speed: {2}'.format(round(total_kms / len(trips), 2), secondsToString(total_time / len(trips)), round(total_kms * 3600 / total_time, 1)))
-	print('Max kms: {0}, max time: {1}, max trips per day: {2} ({3})\n'.format(max_kms, secondsToString(max_time), days[max_day], max_day))
+	print('Max kms: {0}, max time: {1}'.format(max_kms, secondsToString(max_time)))
+	print('Max kms in day: {0} ({1}), max time in day: {2} ({3}), max trips per day: {4} ({5})\n'.format(days_kms[max_day_kms], max_day_kms, secondsToString(days_time[max_day_time]), max_day_time, days[max_day], max_day))
 	print('Used stations ({0}):\n{1}\n'.format(len(sorted_stations), tupleListToString(sorted_stations, False)))
 	print('Used bikes ({0}):\n{1}\n'.format(len(sorted_bikes), tupleListToString(sorted_bikes, False)))
 	print('Fastest trips:\n{0}\n'.format(tupleListToString(sorted_speed[0:10], True)))
