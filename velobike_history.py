@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from bs4 import Tag
 import re
 import json
+import time
 import pickle
 import urllib
 import os.path
@@ -15,7 +16,7 @@ DATA_FILE = 'trips.dat'
 
 class Trip:
 	def __str__(self):
-		return self.date + ': from ' + str(self.p_from) + ' to ' + str(self.p_to) + ' (' + str(self.info_bike) + '), ' + str(self.info_distance) + 'km, ' + str(self.info_time) + ' min '
+		return self.date + ': from ' + str(self.p_from) + ' to ' + str(self.p_to) + ' (' + str(self.info_bike) + '), ' + str(self.info_distance) + 'km, ' + secondsToString(self.info_time) + ' '
 	
 cookies = http.cookiejar.CookieJar()
 
@@ -68,19 +69,8 @@ def parseArguments():
 	ep = args.end_page
 	md = args.minimum_distance
 
-def sanitizeTrips():
-	if login == '7987237':
-		trip_fix = Trip()
-		trip_fix.date = '21/09/2017'
-		trip_fix.p_from = 462
-		trip_fix.p_to = 352
-		trip_fix.info_bike = str(5123)
-		trip_fix.info_time = 58
-		trip_fix.info_distance = 14.7
-		if not (any(x for x in trips if x.date == trip_fix.date and x.p_from == trip_fix.p_from \
-						and x.p_to == trip_fix.p_to and x.info_bike == trip_fix.info_bike and x.info_time == trip_fix.info_time)):
-			trips.append(trip_fix)
-	trips.sort(key=lambda x: datetime.strptime(x.date, '%d/%m/%Y'), reverse=True)
+def secondsToString(time_sec):
+	return time.strftime('%H:%M:%S', time.gmtime(time_sec))
 
 def grabTrips():
 	opener = createCookedUrlOpener()
@@ -106,14 +96,14 @@ def grabTrips():
 				holder = item.find('div', class_='history-list__holder')
 				point_from = str(holder.find_all('span', class_='route-info__point-title')[0].text.encode('utf-8'))
 				point_to = str(holder.find_all('span', class_='route-info__point-title')[1].text.encode('utf-8'))
-				time = str(holder.find('span', class_='routes-list__time').string.encode('utf-8'))
+				time_val = str(holder.find('span', class_='routes-list__time').string.encode('utf-8'))
 				distance = str(holder.find('span', class_='routes-list__distance').string.encode('utf-8'))
 				trip = Trip()
 				trip.date = item.find('span', class_='history-list__date').text
 				trip.p_from = int(re.search('.*(\d{4})', point_from).group(1))
 				trip.p_to = int(re.search('.*(\d{4})', point_to).group(1))
 				trip.info_bike = str(holder.find('span', class_='routes-list__bike').string)
-				trip.info_time = int(re.search('~ (\d*) ', time).group(1))
+				trip.info_time = (datetime.strptime(re.search('b\'(.*)\'', time_val).group(1), '%H:%M:%S') - datetime(1900, 1, 1)).total_seconds()
 				trip.info_distance = float(re.search('([\d\.]*) ', distance).group(1))
 				if any(x for x in trips if x.date == trip.date and x.p_from == trip.p_from \
 						and x.p_to == trip.p_to and x.info_bike == trip.info_bike and x.info_time == trip.info_time):
@@ -173,7 +163,7 @@ def processTrips(trips):
 		appendToDictionary(stations, trip.p_to)
 		appendToDictionary(bikes, trip.info_bike)
 		if trip.info_distance >= md:
-			speed = trip.info_distance * 60 / trip.info_time if trip.info_time else 0
+			speed = trip.info_distance * 3600 / trip.info_time if trip.info_time else 0
 			trips_speed[trip] = speed
 	
 	max_day = max(days.items(), key=operator.itemgetter(1))[0]
@@ -182,9 +172,9 @@ def processTrips(trips):
 	sorted_speed = sorted(trips_speed.items(), key=operator.itemgetter(1), reverse=True)
 	sorted_len = sorted(trips, key=lambda x: -x.info_distance)
 	sorted_time = sorted(trips, key=lambda x: -x.info_time)
-	print('Total trips: {0}, total kms: {1}, total time: {2}'.format(len(trips), round(total_kms), total_time))
-	if len(trips) > 0: print('Avg kms: {0}, avg time: {1}, avg speed: {2}'.format(round(total_kms / len(trips), 2), round(total_time / len(trips), 2), round(total_kms * 60 / total_time, 1)))
-	print('Max kms: {0}, max time: {1}, max trips per day: {2} ({3})\n'.format(max_kms, max_time, days[max_day], max_day))
+	print('Total trips: {0}, total kms: {1}, total time: {2}'.format(len(trips), round(total_kms), timedelta(seconds=total_time)))
+	if len(trips) > 0: print('Avg kms: {0}, avg time: {1}, avg speed: {2}'.format(round(total_kms / len(trips), 2), secondsToString(total_time / len(trips)), round(total_kms * 3600 / total_time, 1)))
+	print('Max kms: {0}, max time: {1}, max trips per day: {2} ({3})\n'.format(max_kms, secondsToString(max_time), days[max_day], max_day))
 	print('Used stations ({0}):\n{1}\n'.format(len(sorted_stations), tupleListToString(sorted_stations, False)))
 	print('Used bikes ({0}):\n{1}\n'.format(len(sorted_bikes), tupleListToString(sorted_bikes, False)))
 	print('Fastest trips:\n{0}\n'.format(tupleListToString(sorted_speed[0:10], True)))
@@ -201,7 +191,6 @@ if login == '':
 	requestAuth()
 if authenticateOnServer():	
 	grabTrips()
-	sanitizeTrips()
 	saveStorage()
 	processTrips(trips)	
 else:
