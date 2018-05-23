@@ -63,11 +63,13 @@ def parseArguments():
     parser.add_argument("-sp", "--start_page", help="Scan from the specified page number", type=int, default=1)
     parser.add_argument("-ep", "--end_page", help="Scan to the specified page number", type=int, default=None)
     parser.add_argument("-md", "--minimum_distance", help="Minimum distance to count in fastest trips report", type=int, default=0)
+    parser.add_argument("-y", "--year", help="Trips year to count", type=int, default=-1)
     args = parser.parse_args()
-    global sp, ep, md
+    global sp, ep, md, year
     sp = args.start_page
     ep = args.end_page
     md = args.minimum_distance
+    year = args.year
 
 def secondsToString(time_sec):
     return time.strftime('%H:%M:%S', time.gmtime(time_sec))
@@ -154,6 +156,7 @@ def processTrips(trips):
     max_time = 0
     total_kms = 0
     total_time = 0
+    if year > 0: trips = list(filter(lambda trip: str(year) == trip.date[-4:], trips))
     for trip in trips:
         if trip.info_distance > max_kms:
             max_kms = trip.info_distance
