@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from bs4 import Tag
 import re
+import sys
 import json
 import time
 import pickle
@@ -62,14 +63,20 @@ def parseArguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-sp", "--start_page", help="Scan from the specified page number", type=int, default=1)
     parser.add_argument("-ep", "--end_page", help="Scan to the specified page number", type=int, default=None)
-    parser.add_argument("-md", "--minimum_distance", help="Minimum distance to count in fastest trips report", type=int, default=0)
+    parser.add_argument("-l", "--local", action='store_true', help="Scan only local database")
     parser.add_argument("-y", "--year", help="Trips year to count", type=int, default=-1)
+    parser.add_argument("-md", "--minimum_distance", help="Minimum distance to count", type=int, default=0)
+    parser.add_argument("-ss", "--start_station", help="Count only trips, started from this station", type=int, default=-1)
+    parser.add_argument("-es", "--end_station", help="Count only trips, finished on this station", type=int, default=-1)
     args = parser.parse_args()
-    global sp, ep, md, year
+    global sp, ep, md, local, year, ss, es
     sp = args.start_page
     ep = args.end_page
-    md = args.minimum_distance
+    local = args.local
     year = args.year
+    md = args.minimum_distance
+    ss = args.start_station
+    es = args.end_station
 
 def secondsToString(time_sec):
     return time.strftime('%H:%M:%S', time.gmtime(time_sec))
@@ -157,6 +164,9 @@ def processTrips(trips):
     total_kms = 0
     total_time = 0
     if year > 0: trips = list(filter(lambda trip: str(year) == trip.date[-4:], trips))
+    if ss > 0: trips = list(filter(lambda trip: ss == trip.p_from, trips))
+    if es > 0: trips = list(filter(lambda trip: es == trip.p_to, trips))
+    trips = list(filter(lambda trip: trip.info_distance >= md, trips))
     for trip in trips:
         if trip.info_distance > max_kms:
             max_kms = trip.info_distance
@@ -170,9 +180,8 @@ def processTrips(trips):
         appendToDictionary(stations, trip.p_from)
         appendToDictionary(stations, trip.p_to)
         appendToDictionary(bikes, trip.info_bike)
-        if trip.info_distance >= md:
-            speed = trip.info_distance * 3600 / trip.info_time if trip.info_time else 0
-            trips_speed[trip] = speed
+        speed = trip.info_distance * 3600 / trip.info_time if trip.info_time else 0
+        trips_speed[trip] = speed
 
     max_day = max(days.items(), key=operator.itemgetter(1))[0]
     max_day_kms    = max(days_kms.items(), key=operator.itemgetter(1))[0]
@@ -196,13 +205,19 @@ def processTrips(trips):
     printTrips(trips)
     return
 
-parseArguments()
-loadStorage()
-if login == '':
-    requestAuth()
-if authenticateOnServer():
-    grabTrips()
-    saveStorage()
-    processTrips(trips)    
-else:
-    print('Wrong credentials!')
+def main(argv):
+    parseArguments()
+    loadStorage()
+    if not local:
+        if login == '':
+            requestAuth()
+        if not authenticateOnServer():
+            print('Wrong credentials!')
+            return
+        grabTrips()
+        saveStorage()
+    processTrips(trips)
+    return
+    
+if __name__ == "__main__":
+    main(sys.argv)
