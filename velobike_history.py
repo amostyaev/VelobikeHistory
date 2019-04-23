@@ -102,6 +102,8 @@ def grabTrips():
                     continue
                 if not (item.find('div', class_='card-preview') is None):
                     continue
+                if item.find('div', class_='history-list__holder') is None:
+                    continue
                 holder = item.find('div', class_='history-list__holder')
                 point_from = str(holder.find_all('span', class_='route-info__point-title')[0].text.encode('utf-8'))
                 point_to = str(holder.find_all('span', class_='route-info__point-title')[1].text.encode('utf-8'))
