@@ -68,8 +68,10 @@ def parseArguments():
     parser.add_argument("-md", "--minimum_distance", help="Minimum distance to count", type=int, default=0)
     parser.add_argument("-ss", "--start_station", help="Count only trips, started from this station", type=int, default=-1)
     parser.add_argument("-es", "--end_station", help="Count only trips, finished on this station", type=int, default=-1)
+    parser.add_argument("-vl", "--vehicle_low", help="Count only trips, made on bike with number >=", type=int, default=-1)
+    parser.add_argument("-vh", "--vehicle_high", help="Count only trips, made on bike with number <=", type=int, default=-1)
     args = parser.parse_args()
-    global sp, ep, md, local, year, ss, es
+    global sp, ep, md, local, year, ss, es, vl, vh
     sp = args.start_page
     ep = args.end_page
     local = args.local
@@ -77,6 +79,8 @@ def parseArguments():
     md = args.minimum_distance
     ss = args.start_station
     es = args.end_station
+    vl = args.vehicle_low
+    vh = args.vehicle_high
 
 def secondsToString(time_sec):
     return time.strftime('%H:%M:%S', time.gmtime(time_sec))
@@ -168,6 +172,8 @@ def processTrips(trips):
     if year > 0: trips = list(filter(lambda trip: str(year) == trip.date[-4:], trips))
     if ss > 0: trips = list(filter(lambda trip: ss == trip.p_from, trips))
     if es > 0: trips = list(filter(lambda trip: es == trip.p_to, trips))
+    if vl > 0: trips = list(filter(lambda trip: int(trip.info_bike) >= vl, trips))
+    if vh > 0: trips = list(filter(lambda trip: int(trip.info_bike) <= vh, trips))
     trips = list(filter(lambda trip: trip.info_distance >= md, trips))
     for trip in trips:
         if trip.info_distance > max_kms:
