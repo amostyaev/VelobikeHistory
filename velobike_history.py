@@ -65,17 +65,19 @@ def parseArguments():
     parser.add_argument("-ep", "--end_page", help="Scan to the specified page number", type=int, default=None)
     parser.add_argument("-l", "--local", action='store_true', help="Scan only local database")
     parser.add_argument("-y", "--year", help="Trips year to count", type=int, default=-1)
+    parser.add_argument("-d", "--date", help="Trips for a date to count", default="")
     parser.add_argument("-md", "--minimum_distance", help="Minimum distance to count", type=int, default=0)
     parser.add_argument("-ss", "--start_station", help="Count only trips, started from this station", type=int, default=-1)
     parser.add_argument("-es", "--end_station", help="Count only trips, finished on this station", type=int, default=-1)
     parser.add_argument("-vl", "--vehicle_low", help="Count only trips, made on bike with number >=", type=int, default=-1)
     parser.add_argument("-vh", "--vehicle_high", help="Count only trips, made on bike with number <=", type=int, default=-1)
     args = parser.parse_args()
-    global sp, ep, md, local, year, ss, es, vl, vh
+    global sp, ep, md, local, year, date, ss, es, vl, vh
     sp = args.start_page
     ep = args.end_page
     local = args.local
     year = args.year
+    date = args.date
     md = args.minimum_distance
     ss = args.start_station
     es = args.end_station
@@ -169,6 +171,7 @@ def processTrips(trips):
     max_time = 0
     total_kms = 0
     total_time = 0
+    if len(date) > 0: trips = list(filter(lambda trip: date == trip.date, trips))
     if year > 0: trips = list(filter(lambda trip: str(year) == trip.date[-4:], trips))
     if ss > 0: trips = list(filter(lambda trip: ss == trip.p_from, trips))
     if es > 0: trips = list(filter(lambda trip: es == trip.p_to, trips))
@@ -199,10 +202,10 @@ def processTrips(trips):
     sorted_speed = sorted(trips_speed.items(), key=operator.itemgetter(1), reverse=True)
     sorted_len = sorted(trips, key=lambda x: -x.info_distance)
     sorted_time = sorted(trips, key=lambda x: -x.info_time)
-    print('Total trips: {0}, total kms: {1}, total time: {2}'.format(len(trips), round(total_kms), timedelta(seconds=total_time)))
+    print('Total trips: {0}, total kms: {1}, total time: {2}'.format(len(trips), round(total_kms, 1), timedelta(seconds=total_time)))
     if len(trips) > 0: print('Avg kms: {0}, avg time: {1}, avg speed: {2}'.format(round(total_kms / len(trips), 2), secondsToString(total_time / len(trips)), round(total_kms * 3600 / total_time, 1)))
     print('Max kms: {0}, max time: {1}'.format(max_kms, secondsToString(max_time)))
-    print('Max kms in day: {0} ({1}), max time in day: {2} ({3}), max trips per day: {4} ({5})\n'.format(days_kms[max_day_kms], max_day_kms, secondsToString(days_time[max_day_time]), max_day_time, days[max_day], max_day))
+    print('Max kms in day: {0} ({1}), max time in day: {2} ({3}), max trips per day: {4} ({5})\n'.format(round(days_kms[max_day_kms], 1), max_day_kms, secondsToString(days_time[max_day_time]), max_day_time, days[max_day], max_day))
     print('Used stations ({0}):\n{1}\n'.format(len(sorted_stations), tupleListToString(sorted_stations, False)))
     print('Used bikes ({0}):\n{1}\n'.format(len(sorted_bikes), tupleListToString(sorted_bikes, False)))
     print('Fastest trips:\n{0}\n'.format(tupleListToString(sorted_speed[0:10], True)))
