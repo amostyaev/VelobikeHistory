@@ -69,10 +69,14 @@ def parseArguments():
     parser.add_argument("-md", "--minimum_distance", help="Minimum distance to count", type=int, default=0)
     parser.add_argument("-ss", "--start_station", help="Count only trips, started from this station", type=int, default=-1)
     parser.add_argument("-es", "--end_station", help="Count only trips, finished on this station", type=int, default=-1)
+    parser.add_argument("-v", "--vehicle", help="Count only trips, made on bike with that number", type=int, default=-1)
     parser.add_argument("-vl", "--vehicle_low", help="Count only trips, made on bike with number >=", type=int, default=-1)
     parser.add_argument("-vh", "--vehicle_high", help="Count only trips, made on bike with number <=", type=int, default=-1)
+    parser.add_argument("-ovt", "--order_by_vehicle_trips", help="Order vehicles list by trips number", dest='order_number', action='store_false')
+    parser.add_argument("-ovn", "--order_by_vehicle_number", help="Order vehicles list by vehicle number", dest='order_number', action='store_true')
+    parser.set_defaults(order_number=False)
     args = parser.parse_args()
-    global sp, ep, md, local, year, date, ss, es, vl, vh
+    global sp, ep, md, local, year, date, ss, es, vehicle, vl, vh, order_number
     sp = args.start_page
     ep = args.end_page
     local = args.local
@@ -83,6 +87,8 @@ def parseArguments():
     es = args.end_station
     vl = args.vehicle_low
     vh = args.vehicle_high
+    order_number = args.order_number
+    if args.vehicle > 0: vh = vl = args.vehicle
 
 def secondsToString(time_sec):
     return time.strftime('%H:%M:%S', time.gmtime(time_sec))
@@ -198,7 +204,7 @@ def processTrips(trips):
     max_day_kms    = max(days_kms.items(), key=operator.itemgetter(1))[0]
     max_day_time = max(days_time.items(), key=operator.itemgetter(1))[0]
     sorted_stations = sorted(stations.items(), key=operator.itemgetter(1, 0), reverse=True)
-    sorted_bikes = sorted(bikes.items(), key=operator.itemgetter(1, 0), reverse=True)
+    sorted_bikes = sorted(bikes.items(), key=operator.itemgetter(0 if order_number else 1, 1 if order_number else 0), reverse=True)
     sorted_speed = sorted(trips_speed.items(), key=operator.itemgetter(1), reverse=True)
     sorted_len = sorted(trips, key=lambda x: -x.info_distance)
     sorted_time = sorted(trips, key=lambda x: -x.info_time)
