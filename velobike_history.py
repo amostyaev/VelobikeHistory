@@ -90,6 +90,10 @@ def parseArguments():
     order_number = args.order_number
     if args.vehicle > 0: vh = vl = args.vehicle
 
+def loadTrips():
+    loadStorage()
+    return trips
+
 def secondsToString(time_sec):
     return time.strftime('%H:%M:%S', time.gmtime(time_sec))
 
