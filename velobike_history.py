@@ -1,3 +1,8 @@
+# The script collects all pages from velobike.ru account profile
+# Statistics is shown with brief summary, like total trips, kms and time
+#
+# With an additional --map flag the script generates JSON data object with filtered stations data, it can be opened via `velomap.html`
+
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from bs4 import Tag
@@ -14,6 +19,9 @@ import operator
 import http.cookiejar
 
 DATA_FILE = 'trips.dat'
+
+STATIONS_DATA_FILE = 'stations_data.json'
+STATIONS_MAP_FILE = 'velomap.json'
 
 class Trip:
     def __str__(self):
@@ -60,6 +68,7 @@ def authenticateOnServer():
     return json.load(response)['status'] == "ok"
 
 def parseArguments():
+    global sp, ep, md, local, year, date, ss, es, vehicle, vl, vh, order_number, map_view, map_all
     parser = argparse.ArgumentParser()
     parser.add_argument("-sp", "--start_page", help="Scan from the specified page number", type=int, default=1)
     parser.add_argument("-ep", "--end_page", help="Scan to the specified page number", type=int, default=None)
@@ -74,9 +83,12 @@ def parseArguments():
     parser.add_argument("-vh", "--vehicle_high", help="Count only trips, made on bike with number <=", type=int, default=-1)
     parser.add_argument("-ovt", "--order_by_vehicle_trips", help="Order vehicles list by trips number", dest='order_number', action='store_false')
     parser.add_argument("-ovn", "--order_by_vehicle_number", help="Order vehicles list by vehicle number", dest='order_number', action='store_true')
+    parser.add_argument("--map", help="Generate 'velomap.json' data file for the map view", dest='map_view', action='store_true')
+    parser.add_argument("--all_stations", help="Display all stations the map view", dest='map_all', action='store_true')
     parser.set_defaults(order_number=False)
-    args = parser.parse_args()
-    global sp, ep, md, local, year, date, ss, es, vehicle, vl, vh, order_number
+    parser.set_defaults(map_view=False)
+    parser.set_defaults(map_all=False)
+    args = parser.parse_args()    
     sp = args.start_page
     ep = args.end_page
     local = args.local
@@ -88,11 +100,9 @@ def parseArguments():
     vl = args.vehicle_low
     vh = args.vehicle_high
     order_number = args.order_number
+    map_view = args.map_view
+    map_all= args.map_all
     if args.vehicle > 0: vh = vl = args.vehicle
-
-def loadTrips():
-    loadStorage()
-    return trips
 
 def secondsToString(time_sec):
     return time.strftime('%H:%M:%S', time.gmtime(time_sec))
@@ -162,7 +172,17 @@ def printTrips(trips):
         print(str(trip))
     return
 
-def processTrips(trips):
+def filterTrips(trips):
+    if len(date) > 0: trips = list(filter(lambda trip: date == trip.date, trips))
+    if year > 0: trips = list(filter(lambda trip: str(year) == trip.date[-4:], trips))
+    if ss > 0: trips = list(filter(lambda trip: ss == trip.p_from, trips))
+    if es > 0: trips = list(filter(lambda trip: es == trip.p_to, trips))
+    if vl > 0: trips = list(filter(lambda trip: int(trip.info_bike) >= vl, trips))
+    if vh > 0: trips = list(filter(lambda trip: int(trip.info_bike) <= vh, trips))
+    trips = list(filter(lambda trip: trip.info_distance >= md, trips))
+    return trips
+    
+def printStatistics(trips):
     # Total trips, total kms, total time
     # Avg kms, avg time, avg speed
     # Max kms, max time
@@ -181,13 +201,6 @@ def processTrips(trips):
     max_time = 0
     total_kms = 0
     total_time = 0
-    if len(date) > 0: trips = list(filter(lambda trip: date == trip.date, trips))
-    if year > 0: trips = list(filter(lambda trip: str(year) == trip.date[-4:], trips))
-    if ss > 0: trips = list(filter(lambda trip: ss == trip.p_from, trips))
-    if es > 0: trips = list(filter(lambda trip: es == trip.p_to, trips))
-    if vl > 0: trips = list(filter(lambda trip: int(trip.info_bike) >= vl, trips))
-    if vh > 0: trips = list(filter(lambda trip: int(trip.info_bike) <= vh, trips))
-    trips = list(filter(lambda trip: trip.info_distance >= md, trips))
     for trip in trips:
         if trip.info_distance > max_kms:
             max_kms = trip.info_distance
@@ -226,7 +239,59 @@ def processTrips(trips):
     printTrips(trips)
     return
 
+def getStationsList(trips):
+    stations = {}
+    for trip in trips:
+        appendToDictionary(stations, trip.p_to)
+        appendToDictionary(stations, trip.p_from)
+    return stations
+    
+def getStationsLocations():
+    locations = {}
+    with open(STATIONS_DATA_FILE) as json_file:
+        data = json.load(json_file)    
+    for station in data['Items']:
+        locations[int(station['Id'])] = (station['Position']['Lat'], station['Position']['Lon'])
+    return locations
+    
+def writeUserStations(stations, locations):
+    data = []
+    for item in stations.items():
+        station = item[0]
+        frequency = item[1]
+        if station in locations:
+            location = locations[station]
+            data.append({'station': station, 'lat': location[0], 'lon': location[1], 'frequency': frequency, 'visited': True})
+        else:
+            print('Unable to locate the {st} station!'.format(st=station))
+    with open(STATIONS_MAP_FILE, 'w') as text_file:
+        print("locations = {}".format(json.dumps(data)), file=text_file)
+    return
+    
+def writeAllStations(stations, locations):
+    data = []
+    for item in locations.items():
+        station = item[0]
+        location = item[1]
+        visited = True if station in stations else False
+        frequency = stations[station] if station in stations else 0
+        data.append({'station': station, 'lat': location[0], 'lon': location[1], 'frequency': frequency, 'visited': visited})
+        
+    with open(STATIONS_MAP_FILE, 'w') as text_file:
+        print("locations = {}".format(json.dumps(data)), file=text_file)
+    return
+    
+def generateMapData(trips):
+    stations = getStationsList(trips)
+    locations = getStationsLocations()
+    if map_all:
+        writeAllStations(stations, locations)
+    else:
+        writeUserStations(stations, locations)
+    return
+    
 def main(argv):
+    global trips
     parseArguments()
     loadStorage()
     if not local:
@@ -237,7 +302,11 @@ def main(argv):
             return
         grabTrips()
         saveStorage()
-    processTrips(trips)
+    trips = filterTrips(trips)
+    if map_view:
+        generateMapData(trips)
+    else:
+        printStatistics(trips)
     return
     
 if __name__ == "__main__":

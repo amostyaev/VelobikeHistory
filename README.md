@@ -13,7 +13,11 @@ The library scans all pages of account's statistics at https://velobike.ru/accou
 * All trips
 
 ## Output example
-![Example](art/VelobikeHistory.png)
+![StatsExample](art/Statistiсs.png)
+
+## Map view
+Use additional `--map` flag to generate JSON object for `velomap.html`
+![MapExample](art/Velomap.png)
 
 # Setup
 * Install Python 3
