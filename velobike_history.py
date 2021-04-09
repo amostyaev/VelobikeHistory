@@ -60,10 +60,14 @@ def requestAuth():
     print()
 
 def authenticateOnServer():
+    html = urllib.request.urlopen('https://velobike.ru').read()
+    soup = BeautifulSoup(html, "html.parser")
+    csrftoken = soup.find('input', dict(name='csrfmiddlewaretoken'))['value']
+    
     url = 'https://velobike.ru/api/login/'
-    values = {'login' : login, 'pin' : pin}
-    data = urllib.parse.urlencode(values).encode("utf-8")
-    req = urllib.request.Request(url, data)
+    values = {'login' : login, 'pin' : pin, 'csrfmiddlewaretoken' : csrftoken}
+    data = urllib.parse.urlencode(values).encode("utf-8")    
+    req = urllib.request.Request(url, data, {"Cookie": "csrftoken_v4={0}".format(csrftoken)})
     response = createCookedUrlOpener().open(req)
     return json.load(response)['status'] == "ok"
 
