@@ -60,7 +60,7 @@ def requestAuth():
     print()
 
 def authenticateOnServer():
-    html = urllib.request.urlopen('https://velobike.ru').read()
+    html = urllib.request.urlopen('http://velobike.ru').read()
     soup = BeautifulSoup(html, "html.parser")
     csrftoken = soup.find('input', dict(name='csrfmiddlewaretoken'))['value']
     
