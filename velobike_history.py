@@ -1,7 +1,7 @@
 # The script collects all pages from velobike.ru account profile
 # Statistics is shown with brief summary, like total trips, kms and time
 #
-# With an additional --map flag the script generates JSON data object with filtered stations data, it can be opened via `velomap.html`
+# With an additional --map and --all_stations flags the script generates JSON data object with filtered stations data, it can be opened via `velomap.html`
 
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
