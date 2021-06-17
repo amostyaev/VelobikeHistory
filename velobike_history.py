@@ -72,7 +72,7 @@ def authenticateOnServer():
     return json.load(response)['status'] == "ok"
 
 def parseArguments():
-    global sp, ep, md, local, year, date, ss, es, vehicle, vl, vh, order_number, map_view, map_all
+    global sp, ep, md, local, year, date, ss, es, vehicle, vl, vh, order_number, map_view, map_visited
     parser = argparse.ArgumentParser()
     parser.add_argument("-sp", "--start_page", help="Scan from the specified page number", type=int, default=1)
     parser.add_argument("-ep", "--end_page", help="Scan to the specified page number", type=int, default=None)
@@ -88,10 +88,10 @@ def parseArguments():
     parser.add_argument("-ovt", "--order_by_vehicle_trips", help="Order vehicles list by trips number", dest='order_number', action='store_false')
     parser.add_argument("-ovn", "--order_by_vehicle_number", help="Order vehicles list by vehicle number", dest='order_number', action='store_true')
     parser.add_argument("--map", help="Generate 'velomap.json' data file for the map view", dest='map_view', action='store_true')
-    parser.add_argument("--all_stations", help="Display all stations the map view", dest='map_all', action='store_true')
+    parser.add_argument("--visited_stations", help="Display only visited stations on the map view", dest='map_visited', action='store_true')
     parser.set_defaults(order_number=False)
     parser.set_defaults(map_view=False)
-    parser.set_defaults(map_all=False)
+    parser.set_defaults(map_visited=False)
     args = parser.parse_args()    
     sp = args.start_page
     ep = args.end_page
@@ -105,7 +105,7 @@ def parseArguments():
     vh = args.vehicle_high
     order_number = args.order_number
     map_view = args.map_view
-    map_all= args.map_all
+    map_visited = args.map_visited
     if args.vehicle > 0: vh = vl = args.vehicle
 
 def secondsToString(time_sec):
@@ -288,10 +288,10 @@ def writeAllStations(stations, locations):
 def generateMapData(trips):
     stations = getStationsList(trips)
     locations = getStationsLocations()
-    if map_all:
-        writeAllStations(stations, locations)
-    else:
+    if map_visited:
         writeUserStations(stations, locations)
+    else:
+        writeAllStations(stations, locations)
     return
     
 def main(argv):
