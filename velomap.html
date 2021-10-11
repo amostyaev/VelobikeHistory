@@ -20,12 +20,12 @@
     <script type="text/javascript" src="velomap.json"></script>
     <script>
       function initMap() {
-        const unavailableIcon = 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-        const available100Icon = 'http://maps.google.com/mapfiles/ms/icons/purple-dot.png'
-        const available20Icon = 'http://maps.google.com/mapfiles/ms/icons/pink-dot.png'
-        const available10Icon = 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png'
-        const available5Icon = 'http://maps.google.com/mapfiles/ms/icons/orange-dot.png'
-        const available1Icon = 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+        const unavailableIcon = 'http://maps.google.com/mapfiles/ms/icons/blue.png'
+        const available100Icon = 'http://maps.google.com/mapfiles/ms/icons/purple.png'
+        const available20Icon = 'http://maps.google.com/mapfiles/ms/icons/pink.png'
+        const available10Icon = 'http://maps.google.com/mapfiles/ms/icons/yellow.png'
+        const available5Icon = 'http://maps.google.com/mapfiles/ms/icons/orange.png'
+        const available1Icon = 'http://maps.google.com/mapfiles/ms/icons/red.png'
         var map = new google.maps.Map(document.getElementById("map"), {
           zoom: 10,
           center: {lat: 55.82275, lng: 37.51726},
@@ -45,6 +45,9 @@
             icon = available10Icon;
           } else if (locations[i]['frequency'] >= 5) {
             icon = available5Icon;
+          }
+          if (locations[i]['electric']) {
+            icon = icon.replace(/(\.[\w\d_-]+)$/i, '-dot$1');
           }
           marker = new google.maps.Marker({
             position: {lat: locations[i]['lat'], lng: locations[i]['lon']},

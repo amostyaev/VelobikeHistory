@@ -255,7 +255,8 @@ def getStationsLocations():
     with open(STATIONS_DATA_FILE) as json_file:
         data = json.load(json_file)    
     for station in data['Items']:
-        locations[int(station['Id'])] = (station['Position']['Lat'], station['Position']['Lon'])
+        electric = 'electric' in station['StationTypes']
+        locations[int(station['Id'])] = (station['Position']['Lat'], station['Position']['Lon'], electric)
     return locations
     
 def writeUserStations(stations, locations):
@@ -265,7 +266,7 @@ def writeUserStations(stations, locations):
         frequency = item[1]
         if station in locations:
             location = locations[station]
-            data.append({'station': station, 'lat': location[0], 'lon': location[1], 'frequency': frequency, 'visited': True})
+            data.append({'station': station, 'lat': location[0], 'lon': location[1], 'electric': location[2], 'frequency': frequency, 'visited': True})
         else:
             print('Unable to locate the {st} station!'.format(st=station))
     with open(STATIONS_MAP_FILE, 'w') as text_file:
@@ -279,7 +280,7 @@ def writeAllStations(stations, locations):
         location = item[1]
         visited = True if station in stations else False
         frequency = stations[station] if station in stations else 0
-        data.append({'station': station, 'lat': location[0], 'lon': location[1], 'frequency': frequency, 'visited': visited})
+        data.append({'station': station, 'lat': location[0], 'lon': location[1], 'electric': location[2], 'frequency': frequency, 'visited': visited})
         
     with open(STATIONS_MAP_FILE, 'w') as text_file:
         print("locations = {}".format(json.dumps(data)), file=text_file)
